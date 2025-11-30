@@ -1,0 +1,20 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "U.S. Airline Performance Analysis"
+  navbar:
+    background: primary
+    left:
+      - text: "Home"
+        href: index.html
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-location: left
+    code-fold: true
+    smooth-scroll: true
