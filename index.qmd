@@ -1,0 +1,440 @@
+---
+title: "Understanding U.S. Airline Performance"
+subtitle: "A Data-Driven Analysis of Flight Delays, Cancellations, and Operational Patterns"
+author: "May 2019 Flight Data Analysis"
+date: today
+format:
+  html:
+    page-layout: full
+    code-tools: true
+---
+
+## Introduction
+
+Air travel is a critical part of modern transportation, moving millions of passengers daily across the United States. However, flight delays and cancellations remain persistent challenges that affect travelers, airlines, and airports alike. This analysis examines **636,390 domestic flights** from May 2019 to uncover patterns in airline performance, identify operational bottlenecks, and understand what drives disruptions in air travel.
+
+Using comprehensive flight data from the U.S. Department of Transportation, we explore three key questions:
+
+1. **Which airlines struggle most with delays?**
+2. **When and where do operational challenges occur?**
+3. **What causes flights to be canceled?**
+
+These insights reveal not just numbers, but the operational realities facing the aviation industry.
+
+---
+
+## Executive Summary
+
+::: {.key-finding}
+### Key Findings at a Glance
+
+- **Extreme delays vary dramatically by airline**: Maximum delays range from 8.6 hours (Alaska) to over 28 hours (American)
+- **Mid-week dominates air travel**: Friday sees 59% more flights than Saturday
+- **Regional airports face severe challenges**: Small airports like CMX average 70 minutes of delays
+- **Weather drives most cancellations**: 13,012 flights canceled, with weather responsible at 75% of major airports
+- **Flight volume shows weekly patterns**: Weekend dips of 20-30% create predictable capacity cycles
+:::
+
+---
+
+## The Delay Spectrum: Not All Airlines Are Equal
+
+### Maximum Delay Exposure
+
+When flights go wrong, how wrong can they go? Our analysis reveals stark differences in how airlines handle their worst-case scenarios.
+
+```{python}
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+
+# Load data
+delays_max = pd.read_csv('Miniproject_problem1_Shuyu_Meng_sm4094.csv')
+early_dep = pd.read_csv('Miniproject_problem2_Shuyu_Meng_sm4094.csv')
+
+# Convert delays to hours for better readability
+delays_max['max_delay_hours'] = delays_max['max_dep_delay'] / 60
+
+# Create bar chart
+fig = px.bar(delays_max.sort_values('max_dep_delay'), 
+             x='max_delay_hours', 
+             y='Airline_Name',
+             orientation='h',
+             title='Maximum Departure Delay by Airline (Hours)',
+             labels={'max_delay_hours': 'Maximum Delay (hours)', 'Airline_Name': ''},
+             color='max_delay_hours',
+             color_continuous_scale='Reds')
+
+fig.update_layout(height=500, showlegend=False)
+fig.show()
+```
+
+::: {.insight-box}
+**What This Means**
+
+The gap between best and worst performers is dramatic. <span class="highlight">Alaska Airlines</span> experienced a maximum delay of just 8.6 hours, while <span class="highlight">American Airlines</span> had flights delayed over 28 hours—more than an entire day.
+
+This doesn't necessarily mean American is "worse"—larger airlines with more flights and routes face more opportunities for extreme delays. However, it does raise questions about operational recovery procedures and how airlines handle severe disruptions.
+
+**Why It Matters**: Passengers on certain carriers face significantly higher risk of catastrophic delays. This affects not just travel plans, but hotel bookings, missed connections, and business commitments.
+:::
+
+### The Early Bird Phenomenon
+
+Interestingly, some airlines also depart significantly early—up to 46 minutes ahead of schedule.
+
+```{python}
+# Convert to positive numbers and minutes for clarity
+early_dep['minutes_early'] = abs(early_dep['max_early_departure'])
+
+fig = px.bar(early_dep.sort_values('max_early_departure', ascending=True), 
+             x='minutes_early', 
+             y='Airline_Name',
+             orientation='h',
+             title='Maximum Early Departure by Airline (Minutes)',
+             labels={'minutes_early': 'Minutes Ahead of Schedule', 'Airline_Name': ''},
+             color='minutes_early',
+             color_continuous_scale='Greens')
+
+fig.update_layout(height=500, showlegend=False)
+fig.show()
+```
+
+::: {.insight-box}
+**The Double-Edged Sword of Early Departures**
+
+While departing early might seem like efficient operations, it creates problems. <span class="highlight">SkyWest Airlines</span> departed up to 46 minutes early in some cases. This can leave connecting passengers stranded or force travelers to arrive at airports earlier than necessary.
+
+Airlines walk a fine line: depart too late and customers complain about delays; depart too early and you risk leaving passengers behind.
+:::
+
+---
+
+## When America Flies: Weekly Patterns
+
+### The Friday Rush
+
+Not all days are created equal in air travel. Our analysis of 636,390 flights reveals a clear weekly rhythm.
+
+```{python}
+# Load weekday data
+weekday_flights = pd.read_csv('Miniproject_problem3_Shuyu_Meng_sm4094.csv')
+
+# Create bar chart
+fig = px.bar(weekday_flights.sort_values('num_flights', ascending=False), 
+             x='Day_Name', 
+             y='num_flights',
+             title='Flight Volume by Day of Week',
+             labels={'num_flights': 'Number of Flights', 'Day_Name': 'Day of Week'},
+             color='num_flights',
+             color_continuous_scale='Blues')
+
+fig.update_layout(xaxis={'categoryorder':'total descending'})
+fig.show()
+```
+
+```{python}
+# Calculate percentage differences
+max_flights = weekday_flights['num_flights'].max()
+min_flights = weekday_flights['num_flights'].min()
+pct_diff = ((max_flights - min_flights) / min_flights * 100)
+
+print(f"Friday (busiest): {max_flights:,} flights")
+print(f"Saturday (quietest): {min_flights:,} flights")
+print(f"Difference: {pct_diff:.1f}%")
+```
+
+::: {.insight-box}
+**The Business Travel Pattern**
+
+The data tells a clear story: <span class="highlight">weekdays drive airline operations</span>. Friday sees 59% more flights than Saturday, and the mid-week period (Wednesday through Friday) accounts for over 50% of all flights.
+
+**Why This Pattern Exists**:
+- **Business travel** peaks mid-week to Friday as professionals travel for meetings and return home
+- **Weekend leisure travel** favors Friday departures and Sunday returns
+- **Saturday** becomes the "recovery day" for airlines to perform maintenance and reposition aircraft
+
+**Operational Impact**: Airlines must staff heavily mid-week and can scale back on weekends. This creates efficiency opportunities but also challenges in maintaining consistent service levels.
+:::
+
+---
+
+## Geography of Delays: Where Problems Occur
+
+### The Worst Airport for Delays
+
+Which airport should travelers avoid if they value punctuality?
+
+```{python}
+# Load worst airport data
+worst_airport = pd.read_csv('Miniproject_problem4_Shuyu_Meng_sm4094.csv')
+
+print(f"🏆 'Winner' of Worst Average Delay:")
+print(f"   Airport: {worst_airport['Airport_Name'].values[0]}")
+print(f"   Code: {worst_airport['Airport_Code'].values[0]}")
+print(f"   Average Delay: {worst_airport['avg_dep_delay'].values[0]:.1f} minutes")
+```
+
+::: {.insight-box}
+**The Small Airport Challenge**
+
+<span class="highlight">Houghton County Memorial Airport (CMX)</span> in Michigan's Upper Peninsula averages 70 minutes of departure delays—over an hour per flight. 
+
+This might seem surprising given that major hubs like Atlanta or Chicago aren't the worst performers. The explanation lies in **operational context**:
+
+- **Small regional airports** lack redundancy: one weather event or mechanical issue cascades quickly
+- **Limited flight frequency** means missed connections have larger ripple effects  
+- **Fewer alternative aircraft** or crew available for recovery
+- **Weather vulnerability** in northern Michigan affects operations year-round
+
+**Lesson**: Airport size doesn't always predict delay risk. Regional operational constraints can create persistent challenges.
+:::
+
+### Each Airline's Problem Airport
+
+Every airline has airports where delays spike. Let's see where each carrier struggles most.
+
+```{python}
+# Load airline-specific worst airports
+airline_airports = pd.read_csv('Miniproject_problem5_Shuyu_Meng_sm4094.csv')
+
+# Create scatter plot
+fig = px.scatter(airline_airports, 
+                 x='Airline_Code', 
+                 y='avg_dep_delay',
+                 hover_data=['Airport_Name'],
+                 title='Each Airline\'s Most Problematic Airport',
+                 labels={'avg_dep_delay': 'Average Delay (minutes)', 'Airline_Code': 'Airline'},
+                 color='avg_dep_delay',
+                 size='avg_dep_delay',
+                 color_continuous_scale='Reds')
+
+fig.update_layout(height=500)
+fig.show()
+```
+
+```{python}
+# Show top 5 worst
+top_5_worst = airline_airports.nlargest(5, 'avg_dep_delay')[['Airline_Code', 'Airport_Name', 'avg_dep_delay']]
+print("\nTop 5 Airline-Airport Delay Combinations:")
+for idx, row in top_5_worst.iterrows():
+    print(f"  {row['Airline_Code']}: {row['Airport_Name'].split(':')[1].strip()} ({row['avg_dep_delay']:.1f} min)")
+```
+
+::: {.insight-box}
+**Hot Spots Vary by Carrier**
+
+Delays aren't uniform—each airline has specific airports where operations break down:
+
+- <span class="highlight">American Airlines at Santa Barbara</span>: 194 minutes average delay
+- <span class="highlight">ExpressJet at Green Bay</span>: 154 minutes  
+- <span class="highlight">Republic at Fort Lauderdale</span>: 145 minutes
+
+These patterns often reflect:
+- **Hub vs. spoke dynamics**: Non-hub airports may get lower priority for resources
+- **Aircraft type mismatches**: Wrong plane size for demand or runway
+- **Slot timing issues**: Scheduled arrivals during airport congestion peaks
+- **Crew base locations**: Airports far from crew bases face staffing challenges
+
+**Strategic Insight**: Airlines should analyze their network-specific chokepoints rather than focusing only on system-wide averages.
+:::
+
+---
+
+## The Cancellation Crisis: Why Flights Don't Fly
+
+### Scale of the Problem
+
+```{python}
+# Load cancellation count
+cancel_count = pd.read_csv('Miniproject_problem6a_Shuyu_Meng_sm4094.csv')
+
+total_canceled = cancel_count['num_canceled_flights'].values[0]
+cancellation_rate = (total_canceled / 636390) * 100
+
+print(f"Total Flights Analyzed: 636,390")
+print(f"Flights Canceled: {total_canceled:,}")
+print(f"Cancellation Rate: {cancellation_rate:.2f}%")
+```
+
+::: {.key-finding}
+### <span class="metric">{python} f"{total_canceled:,}"</span>
+**flights were canceled in May 2019—representing 2% of all scheduled flights.**
+
+This affected approximately 1 in 50 travelers.
+:::
+
+### What Causes Cancellations?
+
+```{python}
+# Load cancellation reasons by airport
+cancel_reasons = pd.read_csv('Miniproject_problem6b_Shuyu_Meng_sm4094.csv')
+
+# Get top 20 airports by cancellations
+top_20_cancels = cancel_reasons.nlargest(20, 'Num_Cancelations')
+
+# Create stacked bar chart
+fig = px.bar(top_20_cancels, 
+             x='Airport_Code', 
+             y='Num_Cancelations',
+             color='Cancel_Reason',
+             title='Top 20 Airports by Cancellations (Colored by Primary Reason)',
+             labels={'Num_Cancelations': 'Number of Cancellations', 'Airport_Code': 'Airport'},
+             color_discrete_map={'Weather': '#e74c3c', 
+                                'Carrier': '#3498db', 
+                                'National Air System': '#f39c12'})
+
+fig.update_layout(height=500)
+fig.show()
+```
+
+```{python}
+# Analyze reason distribution
+reason_summary = cancel_reasons.groupby('Cancel_Reason')['Num_Cancelations'].sum().sort_values(ascending=False)
+print("\nCancellations by Reason:")
+for reason, count in reason_summary.items():
+    pct = (count / total_canceled) * 100
+    print(f"  {reason}: {count:,} ({pct:.1f}%)")
+```
+
+::: {.insight-box}
+**Weather Dominates, But Not Everywhere**
+
+<span class="highlight">Weather causes the majority of cancellations</span>, but the pattern varies significantly by airport:
+
+**Weather-Heavy Airports**:
+- **DFW (Dallas/Fort Worth)**: 1,187 weather cancellations—likely due to spring storms
+- **IAH (Houston)**: 334 weather cancellations—Gulf Coast weather systems
+- **CLT (Charlotte)**: 314 weather cancellations—Southeastern thunderstorms
+
+**Carrier-Issue Airports**:
+- **HOU, PHX, LAX, MDW**: More carrier-related cancellations suggest operational or mechanical issues
+- These airports show airlines struggling with maintenance, crew scheduling, or capacity management
+
+**National Air System Issues**:
+- **EWR (Newark)**, **JFK (New York)**: Air traffic control and airspace congestion
+- Northeast corridor faces systematic capacity constraints
+
+**Why This Matters**: 
+- Weather cancellations are largely unavoidable but predictable seasonally
+- Carrier cancellations represent controllable operational failures
+- System issues indicate infrastructure investment needs
+:::
+
+---
+
+## Flight Volume Dynamics: The Rolling Pattern
+
+### Daily Rhythm Across the Month
+
+How does flight volume fluctuate day-to-day, and what patterns emerge?
+
+```{python}
+# Load rolling average data
+rolling_avg = pd.read_csv('Miniproject_problem7_Shuyu_Meng_sm4094.csv')
+
+# Clean the data (remove the header row that got mixed in)
+rolling_avg = rolling_avg[rolling_avg['FlightDate'] != 'FlightDate'].copy()
+rolling_avg['FlightDate'] = pd.to_datetime(rolling_avg['FlightDate'])
+rolling_avg['num_flights'] = pd.to_numeric(rolling_avg['num_flights'])
+rolling_avg['avg_flights_prev_3_days'] = pd.to_numeric(rolling_avg['avg_flights_prev_3_days'])
+
+# Create line chart
+fig = go.Figure()
+
+fig.add_trace(go.Scatter(x=rolling_avg['FlightDate'], 
+                         y=rolling_avg['num_flights'],
+                         mode='lines+markers',
+                         name='Daily Flights',
+                         line=dict(color='#3498db', width=2)))
+
+fig.add_trace(go.Scatter(x=rolling_avg['FlightDate'], 
+                         y=rolling_avg['avg_flights_prev_3_days'],
+                         mode='lines',
+                         name='3-Day Moving Average',
+                         line=dict(color='#e74c3c', width=2, dash='dash')))
+
+fig.update_layout(title='Daily Flight Volume with 3-Day Rolling Average',
+                  xaxis_title='Date',
+                  yaxis_title='Number of Flights',
+                  height=500,
+                  hovermode='x unified')
+
+fig.show()
+```
+
+::: {.insight-box}
+**The Weekly Pulse of Aviation**
+
+The data reveals a clear **weekly breathing pattern** in air travel:
+
+**Observable Patterns**:
+1. **Weekend Valleys**: Every Saturday and Sunday show significant drops (15,000-17,000 flights vs. 21,000+ on weekdays)
+2. **Holiday Impact**: Memorial Day weekend (May 25-27) shows the deepest sustained drop, with Friday's volume falling by 23%
+3. **Remarkable Consistency**: Mid-week peaks are stable around 21,000-22,000 flights
+
+**The 3-Day Rolling Average** (red dashed line) smooths out day-to-day noise and reveals:
+- Stable baseline of ~20,000-21,000 flights during normal weeks
+- Holiday weeks disrupt this baseline predictably
+- Recovery to normal levels happens quickly (within 2-3 days)
+
+**Operational Implications**:
+- Airlines can **confidently reduce capacity** on weekends
+- **Crew scheduling** should account for 30% variation between peak and trough days  
+- **Airport resources** (gates, ground staff, security) can be flexed based on these predictable patterns
+- **Maintenance windows** naturally fall on low-volume weekends
+:::
+
+---
+
+## Conclusion: What We Learned and Why It Matters
+
+This analysis of over 600,000 flights from May 2019 reveals that airline performance is far more nuanced than simple "on-time" metrics suggest. Here's what matters:
+
+### 1. **Context Shapes Performance**
+
+Airline and airport rankings depend heavily on context. A small regional carrier serving challenging airports will have different metrics than a major hub-based airline. Regional airports like CMX face structural challenges that pure operational excellence can't overcome.
+
+### 2. **Patterns Are Predictable**
+
+Whether it's the Friday flight rush, weekend capacity dips, or weather-driven cancellations at specific airports, most disruptions follow patterns. This predictability creates opportunities for:
+- Better passenger communication and expectations
+- Strategic scheduling and resource allocation
+- Proactive rather than reactive operations
+
+### 3. **Different Problems Need Different Solutions**
+
+Our analysis identified three distinct problem categories:
+- **Delay management**: Varies by airline operational procedures and recovery capabilities
+- **Cancellation causes**: Split between unavoidable (weather) and manageable (carrier, system) factors  
+- **Capacity planning**: Driven by predictable weekly demand patterns
+
+Each requires tailored interventions rather than one-size-fits-all solutions.
+
+### 4. **The Human Impact**
+
+Behind these statistics are real travelers: business people missing meetings, families disrupted during vacations, and critical trips derailed. The 13,012 canceled flights in just one month affected roughly 1-2 million passengers.
+
+### Looking Forward
+
+Understanding these patterns empowers stakeholders:
+- **Travelers** can make informed choices about airlines, routes, and travel timing
+- **Airlines** can target specific operational bottlenecks with data-driven interventions
+- **Airports** can invest in infrastructure where it matters most
+- **Policymakers** can identify systematic issues requiring regulatory attention
+
+Aviation remains a remarkable achievement—moving millions safely across continents daily. But there's always room for improvement, and data shows us where to focus our efforts.
+
+---
+
+::: {.key-finding}
+### Data Sources & Methodology
+
+- **Data**: U.S. Department of Transportation, Bureau of Transportation Statistics
+- **Time Period**: May 2019 (31 days)
+- **Flight Count**: 636,390 domestic flights
+- **Airlines**: 17 major and regional carriers
+- **Airports**: 300+ departure airports analyzed
+
+All SQL queries and source code available in the [project repository](https://github.com/).
+:::
